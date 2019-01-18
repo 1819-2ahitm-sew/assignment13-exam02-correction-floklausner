@@ -4,6 +4,7 @@ import at.htl.bank.model.BankKonto;
 import at.htl.bank.model.GiroKonto;
 import at.htl.bank.model.SparKonto;
 
+import javax.print.Doc;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +16,8 @@ import java.util.Scanner;
  */
 public class Main {
 
+  public static ArrayList<BankKonto> konten = new ArrayList<>();
+
   // die Konstanten sind package-scoped wegen der Unit-Tests
   static final double GEBUEHR = 0.02;
   static final double ZINSSATZ = 3.0;
@@ -23,7 +26,7 @@ public class Main {
   static final String BUCHUNGSDATEI = "buchungen.csv";
   static final String ERGEBNISDATEI = "ergebnis.csv";
 
-  
+
   /**
    * Führen Sie die drei Methoden erstelleKonten, fuehreBuchungenDurch und
    * findKontoPerName aus
@@ -31,6 +34,10 @@ public class Main {
    * @param args
    */
   public static void main(String[] args) {
+
+    erstelleKonten(KONTENDATEI);
+    fuehreBuchungenDurch(BUCHUNGSDATEI);
+    schreibeKontostandInDatei(ERGEBNISDATEI);
 
   }
 
@@ -46,7 +53,32 @@ public class Main {
    */
   private static void erstelleKonten(String datei) {
 
-        System.out.println("erstelleKonten noch nicht implementiert");
+    String[] arr = new String[3];
+    String name;
+    double anfangsBestand;
+
+    try (Scanner scanner = new Scanner(new FileReader(datei))) {
+      scanner.nextLine();
+      while (scanner.hasNextLine()) {
+        arr = scanner.nextLine().split(";");
+        name = arr[1];
+        anfangsBestand = Double.parseDouble(arr[2]);
+
+        if (arr[0].equals("Sparkonto")) {
+          konten.add(new SparKonto(name, anfangsBestand, ZINSSATZ));
+        }
+
+        if (arr[0].equals("Girokonto")) {
+          konten.add(new GiroKonto(name, anfangsBestand, GEBUEHR));
+        }
+
+      }
+
+    } catch (FileNotFoundException e) {
+      System.err.println(e.getMessage());
+    }
+
+    System.out.println("Erstellung der Konten beendet!");
   }
 
   /**
@@ -64,7 +96,29 @@ public class Main {
    * @param datei BUCHUNGSDATEI
    */
   private static void fuehreBuchungenDurch(String datei) {
-        System.out.println("fuehreBuchungenDurch noch nicht implementiert");
+
+    String[] arr;
+    String vonKonto, kontoNach;
+    double betrag;
+
+    try (Scanner scanner = new Scanner(new FileReader(datei))) {
+      scanner.nextLine();
+      while (scanner.hasNextLine()) {
+        arr = scanner.nextLine().split(";");
+
+        vonKonto = arr[0];
+        kontoNach = arr[1];
+        betrag = Double.parseDouble(arr[2]);
+
+        findeKontoPerName(vonKonto).abheben(betrag);
+        findeKontoPerName(kontoNach).einzahlen(betrag);
+      }
+
+    } catch (FileNotFoundException e) {
+      System.err.println(e.getMessage());
+    }
+    
+    System.out.println("Buchung der Datei beendet!");
   }
 
   /**
@@ -87,7 +141,31 @@ public class Main {
    * @param datei ERGEBNISDATEI
    */
   private static void schreibeKontostandInDatei(String datei) {
-        System.out.println("schreibeKontostandInDatei noch nicht implementiert");
+
+    for (int i = 0; i < konten.size(); i++) {
+      if (konten.get(i) instanceof SparKonto) {
+        ((SparKonto) konten.get(i)).zinsenAnrechnen();
+      }
+    }
+
+    try (PrintWriter printWriter = new PrintWriter(new FileWriter(datei))) {
+      printWriter.println("name;kontotyp;kontostand");
+      for (int i = 0; i < konten.size(); i++) {
+        konten.get(i).getKontoStand();
+        printWriter.print(konten.get(i).getName() + ";");
+        if (konten.get(i) instanceof GiroKonto) {
+          printWriter.print("GiroKonto;");
+        } else {
+          printWriter.print("SparKonto;");
+        }
+        printWriter.println(konten.get(i).getKontoStand());
+
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    System.out.println("Ausgabe in Ergebnisdatei beendet!");
   }
 
   /**
@@ -100,7 +178,14 @@ public class Main {
    *         nicht gefunden wird
    */
   public static BankKonto findeKontoPerName(String name) {
-       return null;
+    BankKonto konto = null;
+
+    for (int i = 0; i < konten.size(); i++) {
+      if (konten.get(i).getName().equals(name)) {
+        konto = konten.get(i);
+      }
+    }
+       return konto;
   }
 
 }
